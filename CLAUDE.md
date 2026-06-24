@@ -68,6 +68,49 @@ the API boundary. **React Hook Form** + Zod for forms. **Tailwind v4** + **shadc
 - **Biome doesn't lint CSS** here (`styles.css` uses Tailwind v4 at-rules the parser rejects);
   Tailwind owns styling. Don't edit shadcn primitives to fix one call site — fix the call site.
 
+## Recipes — how to add X
+
+These are the canonical paths. There's a subagent for the first two (see **Agents** below) —
+invoke it, or follow the steps by hand.
+
+**A new data domain** (e.g. invoices): create `src/api/invoices/` with three files —
+`types.ts` (Zod schema per wire shape + inferred types + a `*FormSchema` for forms),
+`invoices.ts` (raw fns: `fetch*` throw `res.error` for SWR; `create*/update*/delete*` return
+`Result`), `useInvoices.ts` (SWR hooks named `use<Domain><Entity>`, `null` key to disable).
+Copy `src/api/projects/` as the reference and mirror the backend contract exactly.
+
+**A new page**: add `src/routes/_authed/<name>.tsx` (authed, inside the shell) or
+`src/routes/<name>.tsx` (public). Data via a `use*` hook; handle loading (Skeleton) + error.
+Page-only components go in `src/routes/_authed/-components/`. Add it to the `NAV` array in
+`app-shell.tsx` if it needs a sidebar entry. Routes auto code-split — no `.lazy`.
+
+**A form**: `useForm({ resolver: zodResolver(SomeFormSchema) })` with the schema from the
+domain's `types.ts`. Destructure `formState` fields. Controlled shadcn inputs (Select) use
+`<Controller>`. Submit → call a `Result`-returning mutation → `toast` on `!ok` → revalidate.
+
+**A shadcn primitive**: install via the shadcn CLI into `src/components/ui/` (or hand-add
+matching the existing files). **Never edit a primitive to fix one call site.** Build reusable
+compounds in `src/components/blocks/`.
+
+## Anti-patterns (do NOT do these)
+
+- ❌ Copying SWR data into a Zustand store or `useState`. Server state has exactly one owner.
+- ❌ `const x = res.data as Thing`. Parse with a Zod schema via `parseResponse` instead.
+- ❌ `fetch(...)` or calling a raw `fetch*` fn from a component. Go through a hook / the `api` client.
+- ❌ Editing a `components/ui/` primitive. Fix the call site or wrap it in `blocks/`.
+- ❌ Hand-editing `src/routeTree.gen.ts`, or using raw string hrefs instead of typed `<Link>`.
+- ❌ `any` (use `unknown` + narrow), or storing the access token in localStorage.
+
+## Agents
+
+This repo ships convention-aware subagents in `.claude/agents/` (they travel with the template):
+- **scaffold-domain** — create a new `api/<domain>/` wired to a backend endpoint.
+- **scaffold-route** — add a new file-based route + route-local components + nav.
+- **frontend-reviewer** — review a diff against the rules above and run the gates.
+
+Invoke them by name (e.g. "use scaffold-domain to add an invoices domain"). Add new agents
+here when a multi-step task recurs.
+
 ## Testing
 
 Vitest + happy-dom; mock the network with **MSW** at the API boundary (`src/test/msw/`), with
