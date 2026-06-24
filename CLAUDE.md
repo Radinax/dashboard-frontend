@@ -107,6 +107,8 @@ This repo ships convention-aware subagents in `.claude/agents/` (they travel wit
 - **scaffold-domain** — create a new `api/<domain>/` wired to a backend endpoint.
 - **scaffold-route** — add a new file-based route + route-local components + nav.
 - **frontend-reviewer** — review a diff against the rules above and run the gates.
+- **api-contract-sync** — reconcile `api/<domain>/types.ts` Zod schemas with the
+  `dashboard-backend` contracts when the backend changes (reads the sibling repo).
 
 Invoke them by name (e.g. "use scaffold-domain to add an invoices domain"). Add new agents
 here when a multi-step task recurs.
